@@ -11,7 +11,7 @@ import java.util.Collections;
 
 public class wisdmget extends setup {
 
-    public static void main() throws Exception {
+    public static void main() {
         try
         {
             url = new URL("http://www.cis.fordham.edu/wisdm/includes/datasets/latest/WISDM_ar_latest.tar.gz");
@@ -28,8 +28,7 @@ public class wisdmget extends setup {
         }
     }
 
-    public static void createLabels() throws IOException {
-        // todo, finish implementing label generation code
+    private static void createLabels() throws IOException {
         labelsFileName = dataDir + "\\labels.txt";
         modifiedLabelsFileName = dataDir + "\\modified_labels.txt";
         Files.write(Paths.get(labelsFileName),
@@ -43,7 +42,7 @@ public class wisdmget extends setup {
         System.out.println("Created labels\n" + labelsFileName + "\n" + modifiedLabelsFileName);
     }
 
-    public static void saveFile(URL url, String file) throws IOException {
+    private static void saveFile(URL url, String file) throws IOException {
         if (uncompressedFolder.exists()) return; //if data already downloaded and unzipped, don't download again
 
         System.out.println("opening connection");
@@ -65,9 +64,9 @@ public class wisdmget extends setup {
         uncompressTarGZ(downloadedFile, uncompressedFolder);
     }
 
-    public static void uncompressTarGZ(File tarFile, File dest) throws IOException {
+    private static void uncompressTarGZ(File tarFile, File dest) throws IOException {
         dest.mkdir();
-        TarArchiveInputStream tarIn = null;
+        TarArchiveInputStream tarIn;
 
         tarIn = new TarArchiveInputStream(
                 new GzipCompressorInputStream(
@@ -88,13 +87,12 @@ public class wisdmget extends setup {
                 destPath.mkdirs();
             } else {
                 destPath.createNewFile();
-                //byte [] btoRead = new byte[(int)tarEntry.getSize()];
+
                 byte [] btoRead = new byte[1024];
-                //FileInputStream fin
-                //  = new FileInputStream(destPath.getCanonicalPath());
+
                 BufferedOutputStream bout =
                         new BufferedOutputStream(new FileOutputStream(destPath));
-                int len = 0;
+                int len;
 
                 while((len = tarIn.read(btoRead)) != -1)
                 {
@@ -102,7 +100,6 @@ public class wisdmget extends setup {
                 }
 
                 bout.close();
-                btoRead = null;
 
             }
             tarEntry = tarIn.getNextTarEntry();

@@ -5,16 +5,24 @@ import java.util.Map;
 
 public class setup {
 
-    protected static URL url;
-    public static String userDir;
-    protected static String dataDir;
-    protected static String downloadedFileName;
-    protected static File downloadedFile;
-    public static File uncompressedFolder;
-    protected static String labelsFileName;
-    protected static String modifiedLabelsFileName;
-    protected static String rawDataFileName;
-    public static Map<String, Integer> map = new HashMap<>();
+    static URL url;
+    static String userDir;
+    static String dataDir;
+    static String downloadedFileName;
+    static File downloadedFile;
+    static File uncompressedFolder;
+    static String labelsFileName;
+    static String modifiedLabelsFileName;
+    static String rawDataFileName;
+    static Map<String, Integer> map = new HashMap<>();
+
+    static File baseDir;
+    static File baseTrainDir;
+    static File featuresDirTrain;
+    static File labelsDirTrain;
+    static File baseTestDir;
+    static File featuresDirTest;
+    static File labelsDirTest;
 
 
     public static void main (String args [] ) throws Exception {
@@ -24,14 +32,24 @@ public class setup {
         uncompressedFolder = new File(userDir + "\\WISDM_ar_latest");
         dataDir = userDir + "\\WISDM_ar_latest\\WISDM_ar_v1.1";
 
-        map.put("Sitting", 1);
-        map.put("Standing", 2);
-        map.put("Walking", 3);
-        map.put("Jogging", 4);
-        map.put("Downstairs", 5);
-        map.put("Upstairs", 6);
+        //'baseDir': Base directory for the data. Change this if you want to save the data somewhere else
+        baseDir = new File(dataDir);
+        baseTrainDir = new File(baseDir, "train");
+        featuresDirTrain = new File(baseTrainDir, "features");
+        labelsDirTrain = new File(baseTrainDir, "labels");
+        baseTestDir = new File(baseDir, "test");
+        featuresDirTest = new File(baseTestDir, "features");
+        labelsDirTest = new File(baseTestDir, "labels");
+
+        map.put("Sitting", 0);
+        map.put("Standing", 1);
+        map.put("Walking", 2);
+        map.put("Jogging", 3);
+        map.put("Downstairs", 4);
+        map.put("Upstairs", 5);
 
         wisdmget.main();
-        wisdmpreprocessor.main();
+        transform.main();
+        train.main();
     }
 }

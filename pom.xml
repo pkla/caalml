@@ -26,34 +26,18 @@
             <version>1.7.5</version>
         </dependency>
         <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-log4j12</artifactId>
-            <version>1.7.5</version>
-        </dependency>
-
-        <dependency>
             <groupId>commons-io</groupId>
             <artifactId>commons-io</artifactId>
             <version>2.5</version>
         </dependency>
         <dependency>
             <groupId>org.nd4j</groupId>
-            <artifactId>nd4j-common</artifactId>
+            <artifactId>nd4j-native</artifactId>
             <version>0.9.1</version>
         </dependency>
         <dependency>
             <groupId>org.datavec</groupId>
             <artifactId>datavec-api</artifactId>
-            <version>0.9.1</version>
-        </dependency>
-        <dependency>
-            <groupId>org.datavec</groupId>
-            <artifactId>datavec-api</artifactId>
-            <version>0.9.1</version>
-        </dependency>
-        <dependency>
-            <groupId>org.nd4j</groupId>
-            <artifactId>nd4j-common</artifactId>
             <version>0.9.1</version>
         </dependency>
         <dependency>
@@ -68,16 +52,6 @@
             <dependency>
                 <groupId>org.nd4j</groupId>
                 <artifactId>nd4j-native-platform</artifactId>
-                <version>${nd4j.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.nd4j</groupId>
-                <artifactId>nd4j-cuda-7.5-platform</artifactId>
-                <version>${nd4j.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.nd4j</groupId>
-                <artifactId>nd4j-cuda-8.0-platform</artifactId>
                 <version>${nd4j.version}</version>
             </dependency>
         </dependencies>

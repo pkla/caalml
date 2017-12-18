@@ -25,11 +25,6 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.util.Date;
 
-/**
- * Adapted from Alex Black's "Sequence Classification Example Using a LSTM Recurrent Neural Network"
- */
-
-
 public class train extends setup {
 
     private static final Logger log = LoggerFactory.getLogger(train.class);
@@ -88,9 +83,8 @@ public class train extends setup {
 
         net.setListeners(new ScoreIterationListener(20));   //Print the score (loss function value) every 20 iterations
 
-
         // ----- Train the network, evaluating the test set performance at each epoch -----
-        int nEpochs = 1;
+        int nEpochs = 40;
         String str = "Test set evaluation at epoch %d: Accuracy = %.2f, F1 = %.2f";
         for (int i = 0; i < nEpochs; i++) {
             net.fit(trainData);
@@ -112,6 +106,4 @@ public class train extends setup {
 
         log.info("----- Complete -----");
     }
-
-
 }

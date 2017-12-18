@@ -17,7 +17,7 @@ public class wisdmget extends setup {
             url = new URL("http://www.cis.fordham.edu/wisdm/includes/datasets/latest/WISDM_ar_latest.tar.gz");
 
             saveFile(url, downloadedFileName);
-            createLabels();
+            //createLabels();
 
             rawDataFileName = dataDir + "\\WISDM_ar_v1.1_raw.txt";
 

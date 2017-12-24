@@ -64,18 +64,22 @@ public class transform extends setup{
                 }
             }
 
-            //if ((lineCount + 1) % 200 == 0) {
             if (segmentLineCount == window) {
-                currSegment++;
+
+                int firstActivity = aSegmentTemp.get(0);
+                int lastActivity = aSegmentTemp.get(aSegmentTemp.size() - 1);
+                if (firstActivity == lastActivity) {
+                    currSegment++;
+                    Segment segment = new Segment(xSegmentTemp, ySegmentTemp, zSegmentTemp, firstActivity);
+                    dataset.addSegment(DeepCopy(segment));
+                }
+
                 segmentLineCount = 0;
-
-                Segment segment = new Segment(xSegmentTemp, ySegmentTemp, zSegmentTemp, aSegmentTemp);
-                dataset.addSegment(DeepCopy(segment));
-
                 aSegmentTemp.clear();
                 xSegmentTemp.clear();
                 ySegmentTemp.clear();
                 zSegmentTemp.clear();
+
             }
 
         }
@@ -105,6 +109,8 @@ public class transform extends setup{
             StringBuilder featureLine = new StringBuilder();
             StringBuilder labelLine = new StringBuilder();
 
+            labelLine.append(segment.getLabel());
+
             for (int i = 0; i < segment.getFeatures().get(0).size(); i++) {
                 try {
                     featureLine.append(segment.getFeatures().get(0).get(i));
@@ -113,10 +119,6 @@ public class transform extends setup{
                     featureLine.append(",");
                     featureLine.append(segment.getFeatures().get(2).get(i));
                     featureLine.append(System.getProperty("line.separator"));
-
-                    labelLine.append(segment.getLabels().get(i));
-                    labelLine.append(System.getProperty("line.separator"));
-
                 } catch (IndexOutOfBoundsException e) {
                     return;
                 }
@@ -128,6 +130,8 @@ public class transform extends setup{
             featureLine.setLength(0);
             labelLine.setLength(0);
         }
+
+        System.out.println(currSegment*0.75 + " training examples and " + currSegment*0.25 + " test examples of length " + window);
         System.out.println("End WISDM Transformation");
     }
 
@@ -136,9 +140,9 @@ public class transform extends setup{
         private List<Float> xSegment;
         private List<Float> ySegment;
         private List<Float> zSegment;
-        private List<Integer> aSegment;
+        private int aSegment;
 
-        Segment(List<Float> xSegmentTemp, List<Float> ySegmentTemp, List<Float> zSegmentTemp, List<Integer> aSegmentTemp) {
+        Segment(List<Float> xSegmentTemp, List<Float> ySegmentTemp, List<Float> zSegmentTemp, int aSegmentTemp) {
             this.aSegment = aSegmentTemp;
             this.xSegment = xSegmentTemp;
             this.ySegment = ySegmentTemp;
@@ -154,7 +158,7 @@ public class transform extends setup{
             return features;
         }
 
-        List<Integer> getLabels() {
+        int getLabel() {
             return aSegment;
         }
     }

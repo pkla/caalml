@@ -49,8 +49,8 @@ public class setup {
         map.put("Downstairs", 4);
         map.put("Upstairs", 4);
 
-        //wisdmget.main();
-        //transform.main();
+        wisdmget.main();
+        transform.main();
         train.main();
     }
 }

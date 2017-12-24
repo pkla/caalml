@@ -1,6 +1,7 @@
 import org.datavec.api.records.reader.SequenceRecordReader;
 import org.datavec.api.records.reader.impl.csv.CSVSequenceRecordReader;
 import org.datavec.api.split.NumberedFileInputSplit;
+import org.deeplearning4j.api.storage.StatsStorage;
 import org.deeplearning4j.datasets.datavec.SequenceRecordReaderDataSetIterator;
 import org.deeplearning4j.eval.Evaluation;
 import org.deeplearning4j.nn.api.OptimizationAlgorithm;
@@ -12,12 +13,16 @@ import org.deeplearning4j.nn.conf.layers.GravesLSTM;
 import org.deeplearning4j.nn.conf.layers.RnnOutputLayer;
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
 import org.deeplearning4j.nn.weights.WeightInit;
+import org.deeplearning4j.optimize.listeners.PerformanceListener;
 import org.deeplearning4j.optimize.listeners.ScoreIterationListener;
+import org.deeplearning4j.ui.api.UIServer;
+import org.deeplearning4j.ui.stats.StatsListener;
+import org.deeplearning4j.ui.storage.InMemoryStatsStorage;
 import org.deeplearning4j.util.ModelSerializer;
 import org.nd4j.linalg.activations.Activation;
 import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
 import org.nd4j.linalg.dataset.api.preprocessor.DataNormalization;
-import org.nd4j.linalg.dataset.api.preprocessor.NormalizerStandardize;
+import org.nd4j.linalg.dataset.api.preprocessor.NormalizerMinMaxScaler;
 import org.nd4j.linalg.lossfunctions.LossFunctions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,21 +34,21 @@ public class train extends setup {
 
     private static final Logger log = LoggerFactory.getLogger(train.class);
 
-
     public static void main() throws Exception {
+
         // ----- Load the training data -----
         SequenceRecordReader trainFeatures = new CSVSequenceRecordReader();
         trainFeatures.initialize(new NumberedFileInputSplit(featuresDirTrain.getAbsolutePath() + "/%d.csv", 0, 449));
         SequenceRecordReader trainLabels = new CSVSequenceRecordReader();
         trainLabels.initialize(new NumberedFileInputSplit(labelsDirTrain.getAbsolutePath() + "/%d.csv", 0, 449));
 
-        int miniBatchSize = 10;
-        int numLabelClasses = 6;
+        int miniBatchSize = 256;
+        int numLabelClasses = 5;
         DataSetIterator trainData = new SequenceRecordReaderDataSetIterator(trainFeatures, trainLabels, miniBatchSize, numLabelClasses,
                 false, SequenceRecordReaderDataSetIterator.AlignmentMode.ALIGN_END);
 
         //Normalize the training data
-        DataNormalization normalizer = new NormalizerStandardize();
+        DataNormalization normalizer = new NormalizerMinMaxScaler();
         normalizer.fit(trainData);  //Collect training data statistics
         trainData.reset();
 
@@ -62,34 +67,50 @@ public class train extends setup {
 
         testData.setPreProcessor(normalizer);   //Note that we are using the exact same normalization process as the training data
 
-
         // ----- Configure the network -----
+        int lstmLayerSize = 24;
         MultiLayerConfiguration conf = new NeuralNetConfiguration.Builder()
                 .seed(123)    //Random number generator seed for improved repeatability. Optional.
                 .optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT).iterations(1)
                 .weightInit(WeightInit.XAVIER)
-                .updater(Updater.NESTEROVS)
-                .learningRate(0.005)
+                .updater(Updater.ADAGRAD)
+                .learningRate(0.1)
+                .regularization(true)
+                .dropOut(0.5)
                 .gradientNormalization(GradientNormalization.ClipElementWiseAbsoluteValue)  //Not always required, but helps with this data set
                 .gradientNormalizationThreshold(0.5)
                 .list()
-                .layer(0, new GravesLSTM.Builder().activation(Activation.TANH).nIn(3).nOut(10).build())
-                .layer(1, new RnnOutputLayer.Builder(LossFunctions.LossFunction.MCXENT)
-                        .activation(Activation.SOFTMAX).nIn(10).nOut(numLabelClasses).build())
+                .layer(0, new GravesLSTM.Builder().activation(Activation.SOFTSIGN).nIn(trainData.inputColumns()).nOut(lstmLayerSize).build())
+                .layer( 1, new RnnOutputLayer.Builder(LossFunctions.LossFunction.MCXENT)
+                        .activation(Activation.SOFTMAX).nIn(lstmLayerSize).nOut(numLabelClasses).build())
                 .pretrain(false).backprop(true).build();
 
         MultiLayerNetwork net = new MultiLayerNetwork(conf);
         net.init();
 
-        net.setListeners(new ScoreIterationListener(20));   //Print the score (loss function value) every 20 iterations
+        net.setListeners(new ScoreIterationListener(10));   //Print the score (loss function value) every 10 iterations
+
+        //Initialize user interface backend
+        UIServer uiServer = UIServer.getInstance();
+
+        //Configure storage for network stats
+        //File statsFile = new File(userDir + "\\" + new Date().getTime() + "_stats");
+        //StatsStorage statsStorage = new FileStatsStorage(statsFile);
+        StatsStorage statsStorage = new InMemoryStatsStorage();
+
+        uiServer.attach(statsStorage);
+        net.setListeners(new StatsListener(statsStorage));
+        net.setListeners(new PerformanceListener(10));
 
         // ----- Train the network, evaluating the test set performance at each epoch -----
-        int nEpochs = 40;
+
+        int nEpochs = 1200;
         String str = "Test set evaluation at epoch %d: Accuracy = %.2f, F1 = %.2f";
         for (int i = 0; i < nEpochs; i++) {
             net.fit(trainData);
 
             //Evaluate on the test set:
+
             Evaluation evaluation = net.evaluate(testData);
             log.info(String.format(str, i, evaluation.accuracy(), evaluation.f1()));
 

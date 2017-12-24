@@ -45,8 +45,9 @@ public class setup {
         map.put("Standing", 1);
         map.put("Walking", 2);
         map.put("Jogging", 3);
+        // Combined classes to "Stairs"
         map.put("Downstairs", 4);
-        map.put("Upstairs", 5);
+        map.put("Upstairs", 4);
 
         //wisdmget.main();
         //transform.main();

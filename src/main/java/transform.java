@@ -2,6 +2,8 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 
 import java.io.*;
+import java.nio.file.*;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -14,6 +16,11 @@ public class transform extends setup{
         String data = IOUtils.toString(new FileInputStream(new File(rawDataFileName)));
         String[] lines = data.split(";\r\n");
 
+        if (baseTrainDir.exists() && baseTestDir.exists()) {
+            clearDirectory(Paths.get(baseTrainDir.getAbsolutePath()));
+            clearDirectory(Paths.get(baseTestDir.getAbsolutePath()));
+        }
+
         //Create directories
         baseDir.mkdir();
         baseTrainDir.mkdir();
@@ -22,6 +29,8 @@ public class transform extends setup{
         baseTestDir.mkdir();
         featuresDirTest.mkdir();
         labelsDirTest.mkdir();
+
+        int window = 100;
 
         int lineCount = 0;
         int segmentLineCount = 0;
@@ -55,9 +64,8 @@ public class transform extends setup{
                 }
             }
 
-            // creates segments of length 200
             //if ((lineCount + 1) % 200 == 0) {
-            if (segmentLineCount == 200) {
+            if (segmentLineCount == window) {
                 currSegment++;
                 segmentLineCount = 0;
 
@@ -174,5 +182,21 @@ public class transform extends setup{
 
         ByteArrayInputStream bais = new ByteArrayInputStream(byteData);
         return((Segment) new ObjectInputStream(bais).readObject());
+    }
+
+    static void clearDirectory(Path directory) throws IOException {
+        Files.walkFileTree(directory, new SimpleFileVisitor<Path>() {
+            @Override
+            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                Files.delete(file);
+                return FileVisitResult.CONTINUE;
+            }
+
+            @Override
+            public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
+                Files.delete(dir);
+                return FileVisitResult.CONTINUE;
+            }
+        });
     }
 }

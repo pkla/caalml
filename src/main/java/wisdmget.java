@@ -17,6 +17,7 @@ public class wisdmget extends setup {
             url = new URL("http://www.cis.fordham.edu/wisdm/includes/datasets/latest/WISDM_ar_latest.tar.gz");
 
             saveFile(url, downloadedFileName);
+            uncompressTarGZ(downloadedFile, uncompressedFolder);
             //createLabels();
 
             rawDataFileName = dataDir + "\\WISDM_ar_v1.1_raw.txt";
@@ -60,8 +61,6 @@ public class wisdmget extends setup {
         fos.close();
         in.close();
         System.out.println("file was downloaded");
-
-        uncompressTarGZ(downloadedFile, uncompressedFolder);
     }
 
     private static void uncompressTarGZ(File tarFile, File dest) throws IOException {

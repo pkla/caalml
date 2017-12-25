@@ -90,6 +90,7 @@ public class transform extends setup{
 
         // outputs segments to files
         int nTrain = (int) (segments.size() * 0.75);
+        int nTest = (int) (segments.size() * 0.25);
         int trainCount = 0;
         int testCount = 0;
 
@@ -131,7 +132,7 @@ public class transform extends setup{
             labelLine.setLength(0);
         }
 
-        System.out.println(currSegment*0.75 + " training examples and " + currSegment*0.25 + " test examples of length " + window);
+        System.out.println(nTrain + " training examples and " + nTest + " test examples of length " + window);
         System.out.println("End WISDM Transformation");
     }
 

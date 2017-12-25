@@ -13,8 +13,6 @@ import org.deeplearning4j.nn.conf.layers.GravesLSTM;
 import org.deeplearning4j.nn.conf.layers.RnnOutputLayer;
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
 import org.deeplearning4j.nn.weights.WeightInit;
-import org.deeplearning4j.optimize.listeners.PerformanceListener;
-import org.deeplearning4j.optimize.listeners.ScoreIterationListener;
 import org.deeplearning4j.ui.api.UIServer;
 import org.deeplearning4j.ui.stats.StatsListener;
 import org.deeplearning4j.ui.storage.InMemoryStatsStorage;
@@ -22,7 +20,7 @@ import org.deeplearning4j.util.ModelSerializer;
 import org.nd4j.linalg.activations.Activation;
 import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
 import org.nd4j.linalg.dataset.api.preprocessor.DataNormalization;
-import org.nd4j.linalg.dataset.api.preprocessor.NormalizerMinMaxScaler;
+import org.nd4j.linalg.dataset.api.preprocessor.NormalizerStandardize;
 import org.nd4j.linalg.lossfunctions.LossFunctions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,18 +35,18 @@ public class train extends setup {
     public static void main() throws Exception {
 
         // ----- Load the training data -----
-        SequenceRecordReader trainFeatures = new CSVSequenceRecordReader();
-        trainFeatures.initialize(new NumberedFileInputSplit(featuresDirTrain.getAbsolutePath() + "/%d.csv", 0, 449));
+        SequenceRecordReader trainFeatures = new CSVSequenceRecordReader(0, ",");
+        trainFeatures.initialize(new NumberedFileInputSplit(featuresDirTrain.getAbsolutePath() + "/%d.csv", 0, 8002));
         SequenceRecordReader trainLabels = new CSVSequenceRecordReader();
-        trainLabels.initialize(new NumberedFileInputSplit(labelsDirTrain.getAbsolutePath() + "/%d.csv", 0, 449));
+        trainLabels.initialize(new NumberedFileInputSplit(labelsDirTrain.getAbsolutePath() + "/%d.csv", 0, 8002));
 
-        int miniBatchSize = 256;
+        int miniBatchSize = 128;
         int numLabelClasses = 5;
         DataSetIterator trainData = new SequenceRecordReaderDataSetIterator(trainFeatures, trainLabels, miniBatchSize, numLabelClasses,
                 false, SequenceRecordReaderDataSetIterator.AlignmentMode.ALIGN_END);
 
         //Normalize the training data
-        DataNormalization normalizer = new NormalizerMinMaxScaler();
+        DataNormalization normalizer = new NormalizerStandardize();
         normalizer.fit(trainData);  //Collect training data statistics
         trainData.reset();
 
@@ -57,15 +55,17 @@ public class train extends setup {
 
         // ----- Load the test data -----
         //Same process as for the training data.
-        SequenceRecordReader testFeatures = new CSVSequenceRecordReader();
-        testFeatures.initialize(new NumberedFileInputSplit(featuresDirTest.getAbsolutePath() + "/%d.csv", 0, 149));
+        SequenceRecordReader testFeatures = new CSVSequenceRecordReader(0, ",");
+        testFeatures.initialize(new NumberedFileInputSplit(featuresDirTest.getAbsolutePath() + "/%d.csv", 0, 2667));
         SequenceRecordReader testLabels = new CSVSequenceRecordReader();
-        testLabels.initialize(new NumberedFileInputSplit(labelsDirTest.getAbsolutePath() + "/%d.csv", 0, 149));
+        testLabels.initialize(new NumberedFileInputSplit(labelsDirTest.getAbsolutePath() + "/%d.csv", 0, 2667));
 
         DataSetIterator testData = new SequenceRecordReaderDataSetIterator(testFeatures, testLabels, miniBatchSize, numLabelClasses,
                 false, SequenceRecordReaderDataSetIterator.AlignmentMode.ALIGN_END);
 
         testData.setPreProcessor(normalizer);   //Note that we are using the exact same normalization process as the training data
+
+        log.info(trainData.next(1).getFeatureMatrix().toString());
 
         // ----- Configure the network -----
         int lstmLayerSize = 24;
@@ -73,8 +73,8 @@ public class train extends setup {
                 .seed(123)    //Random number generator seed for improved repeatability. Optional.
                 .optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT).iterations(1)
                 .weightInit(WeightInit.XAVIER)
-                .updater(Updater.ADAGRAD)
-                .learningRate(0.1)
+                .updater(Updater.NESTEROVS)
+                .learningRate(0.005)
                 .regularization(true)
                 .dropOut(0.5)
                 .gradientNormalization(GradientNormalization.ClipElementWiseAbsoluteValue)  //Not always required, but helps with this data set
@@ -88,7 +88,7 @@ public class train extends setup {
         MultiLayerNetwork net = new MultiLayerNetwork(conf);
         net.init();
 
-        net.setListeners(new ScoreIterationListener(10));   //Print the score (loss function value) every 10 iterations
+        //net.setListeners(new ScoreIterationListener(10));   //Print the score (loss function value) every 10 iterations
 
         //Initialize user interface backend
         UIServer uiServer = UIServer.getInstance();
@@ -100,11 +100,11 @@ public class train extends setup {
 
         uiServer.attach(statsStorage);
         net.setListeners(new StatsListener(statsStorage));
-        net.setListeners(new PerformanceListener(10));
+        //net.setListeners(new PerformanceListener(30));
 
         // ----- Train the network, evaluating the test set performance at each epoch -----
 
-        int nEpochs = 1200;
+        int nEpochs = 1000;
         String str = "Test set evaluation at epoch %d: Accuracy = %.2f, F1 = %.2f";
         for (int i = 0; i < nEpochs; i++) {
             net.fit(trainData);
@@ -112,7 +112,10 @@ public class train extends setup {
             //Evaluate on the test set:
 
             Evaluation evaluation = net.evaluate(testData);
+            Evaluation evaluation2 = net.evaluate(trainData);
+            log.info(evaluation.confusionToString());
             log.info(String.format(str, i, evaluation.accuracy(), evaluation.f1()));
+            log.info("TRAIN DATA (DEBUG): " + String.format(str, i, evaluation2.accuracy(), evaluation.f1()));
 
             testData.reset();
             trainData.reset();
@@ -122,8 +125,7 @@ public class train extends setup {
         File locationToSave = new File(userDir + "\\" + new Date().getTime() + "_RNN.zip");
 
         //Updater: i.e., the state for Momentum, RMSProp, Adagrad etc. Save this if you want to train your network more in the future
-        boolean saveUpdater = true;
-        ModelSerializer.writeModel(net, locationToSave, saveUpdater);
+        ModelSerializer.writeModel(net, locationToSave, true);
 
         log.info("----- Complete -----");
     }
